@@ -1,0 +1,5 @@
+index="yourcloudtrailindex" eventName=ModifySnapshotAttribute
+| search requestParameters.attributeType=CREATE_VOLUME_PERMISSION
+| search requestParameters.createVolumePermission.add.items{}.group=all
+| rename requestParameters.snapshotId as SnapshotID, recipientAccountId as Detected_Account, errorCode as Event_Status, awsRegion as Region, eventName as Event_Name, sourceIPAddress as Source_IPAddress
+| table _time, Region, eventID, Event_Name, Source_IPAddress, Detected_Account, SnapshotID, Event_Status
