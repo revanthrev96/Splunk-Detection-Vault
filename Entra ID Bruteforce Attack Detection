@@ -1,0 +1,24 @@
+index="yoursplunkindex" sourcetype="yoursplunksourcetype"
+| dedup properties.originalRequestId
+| search properties.userAgent != "BAV2ROPC" #If your organization does not use this legacy protocol, please remove from the detection.
+| rename user_id as user
+| stats count by _time, user, action, src_ip
+| eval is_failure = if(action="failure", 1, 0)
+| eval is_success = if(action="success", 1, 0)
+| streamstats current=false last(action) as last_action by user
+| eval reset_streak = if(last_action="success", 1, 0)
+| streamstats sum(reset_streak) as reset_marker by user
+| eval failure_streak_id = if(is_failure=1, reset_marker, null())
+| streamstats count as failure_count by user, failure_streak_id
+| eval is_valid_failure = if(failure_count >= 10 AND is_success=0, 1, 0)
+| eval is_end_success = if(action="success" AND last_action="failure", 1, 0)
+| streamstats sum(is_end_success) as success_marker by user
+| where success_marker > 0
+| stats latest(_time) as _time latest(action) as action latest(failure_count) as failure_count by user, reset_marker
+| where failure_count >= 30 # This defines the number of consecutive failures required to be considered a brute force attempt before successful detection. Adjust this value based on your needs; I have set it to 30 or greater.
+| eventstats max(failure_count) as max_failure_count by user
+| where failure_count = max_failure_count
+| eval action="success"
+| sort -_time
+| dedup user failure_count
+| table _time, user, action, failure_count
