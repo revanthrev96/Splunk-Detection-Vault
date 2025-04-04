@@ -1,0 +1,6 @@
+| from datamodel:"Signins_Test"."Successful_Signins" // Replace with raw log search if not using data models
+| iplocation Source_ip
+| search Country IN ("Albania", "Bosnia and Herzegovina", "Kosovo", "Montenegro", "North Macedonia", "Serbia", "Belarus", "Burundi", "Central African Republic", "Cuba", "Democratic Republic of the Congo", "Iran", "Iraq", "Lebanon", "Libya", "Nicaragua", "North Korea", "Somalia", "South Sudan", "Sudan", "Syria", "Ukraine", "Russia", "Venezuela", "Yemen", "Zimbabwe")
+| table  _time, End_user, Source_ip, Country, sourcetype
+| dedup End_user Country
+| eval urgency="Medium"
