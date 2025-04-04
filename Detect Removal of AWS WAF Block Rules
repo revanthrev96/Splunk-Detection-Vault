@@ -1,0 +1,13 @@
+index="aws_cloudtrail" eventName=UpdateWebACL
+| rex field=_raw "\"rules\":.*?\"action\":\s*\{\s*\"(?<action_content>[^\"]+)\"\s*:\s*\{\s*\}\s*\}"
+| where isnotnull(action_content)
+| eval event_time=_time
+| sort 0 requestParameters.name aws_account_id event_time asc
+| streamstats window=2 current=f last(action_content) as previous_action last(event_time) as previous_action_time by requestParameters.name, aws_account_id
+| where previous_action="block" AND action_content!="block"
+| eval status_change = "Block Removed"
+| eval human_readable_block_time=strftime(previous_action_time,"%Y-%m-%d %H:%M:%S")
+| eval human_readable_status_changed_time=strftime(event_time,"%Y-%m-%d %H:%M:%S")
+| rename action_content as status_changed_to
+| eval urgency="High"
+| table aws_account_id, requestParameters.name, human_readable_block_time, human_readable_status_changed_time, status_change, previous_action, status_changed_to
